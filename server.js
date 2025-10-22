@@ -1,5 +1,5 @@
 const express = require("express");
-const app = express();app.use(express.static('public'));
+const app = express();app.use(express.static("public"));
 const http = require("http").createServer(app);
 const io = require("socket.io")(http);
 const crypto = require("crypto");
