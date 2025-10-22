@@ -4,7 +4,8 @@ const http = require("http").createServer(app);
 const io = require("socket.io")(http);
 const crypto = require("crypto");
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
+http.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 app.use(express.static("public"));
 
