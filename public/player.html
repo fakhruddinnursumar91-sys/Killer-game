@@ -9,23 +9,33 @@
 <body>
 <h1>Player Panel</h1>
 
-<p>Your role: <span id="role">Crewmate</span></p>
+<p>Your role: <span id="role">Unknown</span></p>
 <button id="markDeadBtn">Mark Dead</button>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="script.js"></script>
 <script>
 const socket = io();
-const markDeadBtn = document.getElementById("markDeadBtn");
 const roleEl = document.getElementById("role");
+const markDeadBtn = document.getElementById("markDeadBtn");
 
 markDeadBtn.addEventListener("click", () => {
-  const playerName = prompt("Enter your name to mark dead:");
-  if (playerName) socket.emit("markDead", playerName);
+  const name = prompt("Enter your name to mark dead:");
+  if(name) socket.emit("markDead", name);
 });
 
-socket.on("playerDied", (playerName) => {
-  alert(playerName + " is dead!");
+socket.on("gameStarted", (roles) => {
+  const name = prompt("Enter your name:");
+  if(name && roles[name]) roleEl.textContent = roles[name];
+});
+
+socket.on("playerDied", (name) => {
+  alert(name + " is dead!");
+});
+
+socket.on("gameEnded", () => {
+  alert("Game has ended!");
+  roleEl.textContent = "Unknown";
 });
 </script>
 </body>
