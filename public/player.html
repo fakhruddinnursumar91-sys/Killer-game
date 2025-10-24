@@ -3,84 +3,54 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Killer Game Player</title>
-<link rel="stylesheet" href="style.css">
+<title>Killer • Player</title>
+<style>
+body {font-family:"Poppins",sans-serif;background:#f9f9f9;margin:0;padding:20px;display:flex;flex-direction:column;align-items:center;}
+h1 {font-size:26px;font-weight:bold;margin-bottom:15px;text-align:center;}
+button {font-size:16px;padding:8px 16px;margin:5px;border-radius:5px;border:none;cursor:pointer;transition:all 0.2s ease;}
+button:hover {transform:scale(1.05);}
+.role {font-size:20px;font-weight:bold;margin:10px 0;}
+</style>
 </head>
 <body>
-<h1>Player Panel</h1>
+<h1>👥 Killer Game</h1>
 
-<p>Your role: <span id="role">Unknown</span></p>
-<button id="markDeadBtn">Mark Dead</button>
+<input type="text" id="playerName" placeholder="Enter your name">
+<button id="joinBtn">Join Game</button>
 
-<h2>Voting:</h2>
-<ul id="voteList"></ul>
-<div id="voteButtons"></div>
+<p class="role" id="roleDisplay">Your role: ?</p>
+<button id="toggleDeadBtn">Mark Dead / Alive</button>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
 const socket = io();
-const roleEl = document.getElementById("role");
-const markDeadBtn = document.getElementById("markDeadBtn");
-const voteListEl = document.getElementById("voteList");
-const voteButtonsDiv = document.getElementById("voteButtons");
 
-let playerName = null;
-let alivePlayers = [];
-let votingStarted = false;
+const playerNameInput = document.getElementById('playerName');
+const joinBtn = document.getElementById('joinBtn');
+const roleDisplay = document.getElementById('roleDisplay');
+const toggleDeadBtn = document.getElementById('toggleDeadBtn');
 
-// Get token
-const token = new URLSearchParams(window.location.search).get("token");
-if(!token) alert("Invalid link!");
-else socket.emit("getPlayerName", token);
+let joined = false;
 
-// Receive player name
-socket.on("playerNameAssigned", (name)=>{
-  if(name==="Unknown"){ alert("Invalid link!"); return; }
-  playerName=name;
-  alert("Welcome "+playerName);
+joinBtn.addEventListener('click', () => {
+  const name = playerNameInput.value.trim();
+  if (!name) return alert("Enter your name");
+  socket.emit('newPlayer', name);
+  joined = true;
+  joinBtn.disabled = true;
+  playerNameInput.disabled = true;
 });
 
-// Receive game roles
-socket.on("gameStarted", (roles)=>{
-  if(playerName && roles[playerName]) roleEl.textContent = roles[playerName];
+toggleDeadBtn.addEventListener('click', () => {
+  socket.emit('toggleDead');
 });
 
-// Mark dead
-markDeadBtn.addEventListener("click", ()=>{
-  if(playerName && roleEl.textContent!=="Killer"){
-    socket.emit("markDead", playerName);
-  } else alert("Killer cannot mark self dead");
+socket.on('yourRole', role => {
+  roleDisplay.innerText = `Your role: ${role}`;
 });
 
-// Player died
-socket.on("playerDied", (name)=>alert(name+" is dead!"));
-
-// Game ended
-socket.on("gameEnded", ()=>{
-  roleEl.textContent="Unknown";
-  alert("Game ended!");
-});
-
-// Voting started
-socket.on("votingStarted", (alive)=>{
-  votingStarted=true;
-  alivePlayers = Object.keys(alive).filter(p=>alive[p] && p!==playerName);
-  voteButtonsDiv.innerHTML="";
-  alivePlayers.forEach(p=>{
-    const btn = document.createElement("button");
-    btn.textContent = "Vote: "+p;
-    btn.addEventListener("click", ()=>{
-      socket.emit("vote",{voter:playerName,voted:p});
-      voteButtonsDiv.innerHTML="";
-      alert("Voted for "+p);
-    });
-    voteButtonsDiv.appendChild(btn);
-  });
-});
-
-// Voting result
-socket.on("votingResult", ({eliminated, role})=>{
-  alert(eliminated+" got eliminated! Role: "+role);
+socket.on('playerDeadMessage', name => {
+  alert(`${name} is dead!`);
 });
 </script>
 </body>
