@@ -1,8 +1,8 @@
 const express = require("express");
+const { v4: uuidv4 } = require("uuid");
 const app = express();
 const http = require("http").createServer(app);
 const io = require("socket.io")(http);
-const { v4: uuidv4 } = require("uuid");
 
 app.use(express.static("public"));
 
@@ -31,33 +31,39 @@ function resetGame() {
 }
 
 function broadcastPlayers() {
-  io.emit("updatePlayers", players.map(({ name, alive }) => ({ name, alive })));
+  io.emit(
+    "updatePlayers",
+    players.map(({ name, alive }) => ({ name, alive }))
+  );
 }
 
 io.on("connection", (socket) => {
   console.log("New connection:", socket.id);
 
-  // Player joins with their unique link
   socket.on("joinWithLink", (linkId, name) => {
-    let player = players.find((p) => p.linkId === linkId);
+    const player = players.find((p) => p.linkId === linkId);
     if (!player) return;
     player.name = name;
     player.socketId = socket.id;
-
     if (gameStarted) socket.emit("yourRole", player.role);
     broadcastPlayers();
   });
 
-  // Host adds a player (generates unique link)
   socket.on("addPlayer", (name) => {
     const linkId = uuidv4();
-    const player = { id: uuidv4(), name, linkId, alive: true, role: null, socketId: null };
+    const player = {
+      id: uuidv4(),
+      name,
+      linkId,
+      alive: true,
+      role: null,
+      socketId: null,
+    };
     players.push(player);
     socket.emit("playerLinkGenerated", player);
     broadcastPlayers();
   });
 
-  // Start new game (reshuffle roles, set everyone alive)
   socket.on("startGame", () => {
     if (players.length < 2) return;
     players.forEach((p) => (p.alive = true));
@@ -70,14 +76,12 @@ io.on("connection", (socket) => {
     broadcastPlayers();
   });
 
-  // Restart game (same players, reshuffle roles)
   socket.on("restartGame", () => {
     resetGame();
     votingActive = false;
     gameStarted = true;
   });
 
-  // End game completely
   socket.on("endGame", () => {
     gameStarted = false;
     votingActive = false;
@@ -85,7 +89,6 @@ io.on("connection", (socket) => {
     broadcastPlayers();
   });
 
-  // Mark player dead/alive
   socket.on("toggleDead", (linkId) => {
     const player = players.find((p) => p.linkId === linkId);
     if (!player || player.role === "Killer") return;
@@ -94,7 +97,6 @@ io.on("connection", (socket) => {
     broadcastPlayers();
   });
 
-  // Voting control by host
   socket.on("startVoting", () => {
     if (!gameStarted) return;
     votingActive = true;
@@ -118,4 +120,4 @@ io.on("connection", (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-http.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+http.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
