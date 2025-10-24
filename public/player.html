@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,8 +10,6 @@
 <body>
   <div class="container">
     <h1>🎮 Killer Game</h1>
-    <input type="text" id="nameInput" placeholder="Enter your name">
-    <button id="joinBtn">Join Game</button>
 
     <h2 id="roleDisplay">Role: ?</h2>
     <button id="toggleDeadBtn">💀 Mark Dead / ❤️ Alive</button>
@@ -25,24 +24,17 @@
 <script>
   const socket = io();
   const params = new URLSearchParams(window.location.search);
-  const linkId = params.get("link");
+  const token = params.get("token");
 
-  const nameInput = document.getElementById("nameInput");
-  const joinBtn = document.getElementById("joinBtn");
   const roleDisplay = document.getElementById("roleDisplay");
   const toggleDeadBtn = document.getElementById("toggleDeadBtn");
   const votingArea = document.getElementById("votingArea");
   const voteOptions = document.getElementById("voteOptions");
 
-  joinBtn.onclick = () => {
-    const name = nameInput.value.trim();
-    if (!name) return alert("Enter your name");
-    socket.emit("joinWithLink", linkId, name);
-    joinBtn.disabled = true;
-    nameInput.disabled = true;
-  };
+  // Join game automatically
+  socket.emit("joinWithToken", token);
 
-  toggleDeadBtn.onclick = () => socket.emit("toggleDead", linkId);
+  toggleDeadBtn.onclick = () => socket.emit("toggleDead", token);
 
   socket.on("yourRole", (role) => {
     roleDisplay.innerText = `Role: ${role}`;
@@ -56,11 +48,6 @@
     votingArea.style.display = "block";
   });
 
-  socket.on("votingResult", (data) => {
-    votingArea.style.display = "none";
-    alert(`${data.name} was a ${data.role}`);
-  });
-
   socket.on("updatePlayers", (players) => {
     voteOptions.innerHTML = players
       .filter(p => p.alive)
@@ -69,9 +56,14 @@
   });
 
   function vote(name) {
-    socket.emit("voteResult", name);
+    socket.emit("castVote", { voterToken: token, targetName: name });
     votingArea.style.display = "none";
   }
+
+  socket.on("votingResult", (data) => {
+    votingArea.style.display = "none";
+    alert(`${data.name} was a ${data.role}`);
+  });
 </script>
 </body>
 </html>
