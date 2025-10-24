@@ -14,13 +14,13 @@ let roles = {};
 let alive = {};
 let gameStarted = false;
 
-// Emit the full player list to all clients
+// Send updated player list to all
 function emitPlayers() {
   io.emit("updatePlayers", players, alive);
 }
 
 io.on("connection", (socket) => {
-  console.log("A user connected:", socket.id);
+  console.log("User connected:", socket.id);
 
   // Add player
   socket.on("addPlayer", (name) => {
@@ -56,21 +56,19 @@ io.on("connection", (socket) => {
   });
 
   // Mark player dead
-  socket.on("markDead", (playerName) => {
-    if (alive[playerName] && roles[playerName] !== "Killer") {
-      alive[playerName] = false;
-      io.emit("playerDied", playerName);
+  socket.on("markDead", (name) => {
+    if (alive[name] && roles[name] !== "Killer") {
+      alive[name] = false;
+      io.emit("playerDied", name);
       emitPlayers();
-      console.log("Player dead:", playerName);
+      console.log("Player dead:", name);
     }
   });
 
-  // Send updated list when client connects
+  // Send current players when client connects
   socket.emit("updatePlayers", players, alive);
 
-  socket.on("disconnect", () => {
-    console.log("A user disconnected:", socket.id);
-  });
+  socket.on("disconnect", () => console.log("User disconnected:", socket.id));
 });
 
 const PORT = process.env.PORT || 3000;
