@@ -19,9 +19,7 @@
 
 <h2>Players:</h2>
 <ul id="playerList"></ul>
-
 <script src="/socket.io/socket.io.js"></script>
-<script src="script.js"></script>
 <script>
 const socket = io();
 const playerListEl = document.getElementById("playerList");
@@ -52,50 +50,6 @@ endGameBtn.addEventListener("click", () => socket.emit("endGame"));
 startVotingBtn.addEventListener("click", () => alert("Voting started!"));
 
 // Update player list
-socket.on("updatePlayers", (players, alive) => {
-  playerListEl.innerHTML = "";
-  players.forEach(name => {
-    const li = document.createElement("li");
-    li.textContent = name;
-    if (alive[name] === false) li.style.textDecoration = "line-through";
-    playerListEl.appendChild(li);
-  });
-});
-
-socket.on("gameStarted", (r) => {
-  roles = r;
-  alert("Game started! Roles assigned.");
-});
-
-socket.on("gameEnded", () => {
-  roles = {};
-  playerListEl.innerHTML = "";
-  alert("Game ended!");
-});
-</script>
-let roles = {};
-
-addPlayerBtn.addEventListener("click", () => {
-  const name = playerNameInput.value.trim();
-  if (name) {
-    socket.emit("addPlayer", name);
-    playerNameInput.value = "";
-  }
-});
-
-startGameBtn.addEventListener("click", () => {
-  socket.emit("startGame");
-});
-
-endGameBtn.addEventListener("click", () => {
-  socket.emit("endGame");
-  playerListEl.innerHTML = "";
-});
-
-startVotingBtn.addEventListener("click", () => {
-  alert("Voting started! (You can implement voting logic next)");
-});
-
 socket.on("playerAdded", (name) => {
   const li = document.createElement("li");
   li.textContent = name;
@@ -109,6 +63,7 @@ socket.on("gameStarted", (r) => {
 
 socket.on("gameEnded", () => {
   roles = {};
+  playerListEl.innerHTML = "";
   alert("Game ended!");
 });
 
