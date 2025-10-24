@@ -4,15 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Killer • Host</title>
-<style>
-body {font-family:"Poppins",sans-serif;background:#f2f2f2;margin:0;padding:20px;display:flex;flex-direction:column;align-items:center;}
-h1 {font-size:26px;font-weight:bold;margin-bottom:15px;text-align:center;}
-button,input {font-size:16px;padding:8px 16px;margin:5px;border-radius:5px;border:none;cursor:pointer;transition:all 0.2s ease;}
-button:hover {transform:scale(1.05);}
-.players-container {display:flex;flex-wrap:wrap;justify-content:center;max-width:800px;}
-.player-card {background:white;border-radius:12px;box-shadow:0 3px 8px rgba(0,0,0,0.1);padding:15px;margin:10px;width:200px;text-align:center;transition:all 0.3s ease;}
-.player-card.dead {background:#ddd !important;opacity:0.6;}
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <h1>🔪 Killer • Host Panel</h1>
@@ -22,7 +14,7 @@ button:hover {transform:scale(1.05);}
 <button id="addPlayerBtn">Add Player</button>
 </div>
 
-<div style="margin:10px;">
+<div>
 <button id="startGameBtn">Start / New Game</button>
 <button id="endGameBtn">End & Reset Game</button>
 </div>
@@ -30,6 +22,7 @@ button:hover {transform:scale(1.05);}
 <div class="players-container" id="playersContainer"></div>
 
 <script src="/socket.io/socket.io.js"></script>
+<script src="script.js"></script>
 <script>
 const socket = io();
 
@@ -41,6 +34,7 @@ const playersContainer = document.getElementById('playersContainer');
 
 let players = [];
 
+// Add new player
 addPlayerBtn.addEventListener('click', () => {
   const name = playerNameInput.value.trim();
   if (!name) return alert("Enter name");
@@ -48,14 +42,17 @@ addPlayerBtn.addEventListener('click', () => {
   playerNameInput.value = '';
 });
 
+// Start Game
 startGameBtn.addEventListener('click', () => {
   socket.emit('startGame');
 });
 
+// End & Reset Game
 endGameBtn.addEventListener('click', () => {
   socket.emit('endGame');
 });
 
+// Update players
 socket.on('updatePlayers', data => {
   players = data;
   renderPlayers();
