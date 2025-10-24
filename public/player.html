@@ -1,81 +1,32 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Player Panel - Killer Game</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-  <style>
-    body {
-      font-family: 'Poppins', sans-serif;
-      background: linear-gradient(135deg,#c3ec52,#0ba29d);
-      margin:0; display:flex; justify-content:center; align-items:center; height:100vh; color:#fff;
-    }
-    .container { width:95%; max-width:400px; text-align:center; }
-    h2 { font-size:28px; margin-bottom:20px; text-shadow:1px 1px 2px #000; }
-    #roleBox {
-      background:white; color:#333; font-weight:bold; font-size:20px;
-      border-radius:12px; padding:14px; margin-bottom:20px;
-      transform: scale(0.8); opacity:0; transition:0.5s;
-    }
-    #roleBox.show { transform: scale(1); opacity:1; }
-    button { padding:14px 18px; margin:8px; border-radius:12px; font-size:18px; border:none; transition:0.3s; cursor:pointer; }
-    button:hover { transform: scale(1.05); }
-    #markDead { background:red; color:white; width:60%; }
-    .voteBtn { background:#007BFF; color:white; padding:14px; margin:5px; border-radius:12px; width:70%; font-size:18px; }
-    .voteBtn:hover { background:#0056b3; transform: scale(1.05); }
-    .broadcast { background: rgba(255,255,255,0.7); padding:12px; margin-top:5px; border-radius:10px; animation: fadeIn 0.5s; color:#333; font-size:16px; }
-    #voteArea { margin-top:20px; display:flex; flex-direction:column; align-items:center; }
-    @keyframes fadeIn { from {opacity:0; transform:translateY(-10px);} to {opacity:1; transform:translateY(0);} }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Killer Game Player</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="container">
-    <h2>🧑‍🚀 Player Panel</h2>
-    <div id="info">Connecting...</div>
-    <div id="roleBox"></div>
-    <button id="markDead" onclick="markDead()">Mark Dead</button>
-    <div id="voteArea"></div>
-    <div id="log"></div>
-  </div>
+<h1>Player Panel</h1>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const socket = io();
-    const token = new URLSearchParams(window.location.search).get("token");
-    const roleBox = document.getElementById("roleBox");
-    const markBtn = document.getElementById("markDead");
+<p>Your role: <span id="role">Crewmate</span></p>
+<button id="markDeadBtn">Mark Dead</button>
 
-    socket.emit("joinAsPlayer", token);
+<script src="/socket.io/socket.io.js"></script>
+<script src="script.js"></script>
+<script>
+const socket = io();
+const markDeadBtn = document.getElementById("markDeadBtn");
+const roleEl = document.getElementById("role");
 
-    socket.on("playerInfo", data => document.getElementById("info").innerText = `Welcome ${data.name}`);
-    socket.on("broadcast", msg => {
-      const div = document.createElement('div');
-      div.className = "broadcast";
-      div.innerText = msg;
-      document.getElementById("log").appendChild(div);
-    });
+markDeadBtn.addEventListener("click", () => {
+  const playerName = prompt("Enter your name to mark dead:");
+  if (playerName) socket.emit("markDead", playerName);
+});
 
-    socket.on("roleAssigned", role => {
-      roleBox.innerText = `Your role: ${role}`;
-      roleBox.classList.add("show");
-      if(role==="Killer") markBtn.disabled = true;
-    });
-
-    function markDead() { socket.emit("markDead", token); }
-
-    socket.on("votingStart", options => {
-      const area = document.getElementById("voteArea");
-      area.innerHTML = "<h3>Vote for the Killer:</h3>";
-      options.forEach(name => {
-        const btn = document.createElement("button");
-        btn.className = "voteBtn";
-        btn.innerText = name;
-        btn.onclick = () => {
-          socket.emit("vote", { voterToken: token, targetName: name });
-          area.innerHTML = "<p>✅ Vote submitted!</p>";
-        };
-        area.appendChild(btn);
-      });
-    });
-  </script>
+socket.on("playerDied", (playerName) => {
+  alert(playerName + " is dead!");
+});
+</script>
 </body>
 </html>
