@@ -20,10 +20,14 @@
 <h2>Players:</h2>
 <ul id="playerList"></ul>
 
+<h2>Player Links:</h2>
+<ul id="playerLinks"></ul>
+
 <script src="/socket.io/socket.io.js"></script>
 <script>
-const socket = io(); // automatically connects to same domain
+const socket = io();
 const playerListEl = document.getElementById("playerList");
+const playerLinksEl = document.getElementById("playerLinks");
 const playerNameInput = document.getElementById("playerName");
 const addPlayerBtn = document.getElementById("addPlayerBtn");
 const startGameBtn = document.getElementById("startGameBtn");
@@ -35,7 +39,7 @@ let roles = {};
 // Add player
 addPlayerBtn.addEventListener("click", () => {
   const name = playerNameInput.value.trim();
-  if(name) {
+  if(name){
     socket.emit("addPlayer", name);
     playerNameInput.value = "";
   }
@@ -47,18 +51,25 @@ startGameBtn.addEventListener("click", () => socket.emit("startGame"));
 // End game
 endGameBtn.addEventListener("click", () => socket.emit("endGame"));
 
-// Voting
+// Voting placeholder
 startVotingBtn.addEventListener("click", () => alert("Voting started!"));
 
-// Update player list live
+// Update player list
 socket.on("updatePlayers", (players, alive) => {
   playerListEl.innerHTML = "";
   players.forEach(name => {
     const li = document.createElement("li");
     li.textContent = name;
-    if(alive[name] === false) li.style.textDecoration = "line-through";
+    if(alive[name]===false) li.style.textDecoration="line-through";
     playerListEl.appendChild(li);
   });
+});
+
+// Receive token link for each player
+socket.on("playerToken", ({name, token}) => {
+  const li = document.createElement("li");
+  li.innerHTML = `${name}: <a href="/player.html?token=${token}" target="_blank">Link</a>`;
+  playerLinksEl.appendChild(li);
 });
 
 socket.on("gameStarted", (r) => {
@@ -68,14 +79,15 @@ socket.on("gameStarted", (r) => {
 
 socket.on("gameEnded", () => {
   roles = {};
-  playerListEl.innerHTML = "";
+  playerListEl.innerHTML="";
+  playerLinksEl.innerHTML="";
   alert("Game ended!");
 });
 
 socket.on("playerDied", (name) => {
   const items = document.querySelectorAll("#playerList li");
   items.forEach(li => {
-    if(li.textContent === name) li.style.textDecoration = "line-through";
+    if(li.textContent.includes(name)) li.style.textDecoration="line-through";
   });
 });
 </script>
