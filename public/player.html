@@ -18,19 +18,47 @@ const socket = io();
 const roleEl = document.getElementById("role");
 const markDeadBtn = document.getElementById("markDeadBtn");
 
-// Mark dead
-markDeadBtn.addEventListener("click", () => {
-  const name = prompt("Enter your name:");
-  if(name) socket.emit("markDead", name);
+let playerName = null;
+
+// Get token from URL
+const urlParams = new URLSearchParams(window.location.search);
+const token = urlParams.get("token");
+
+if(!token){
+  alert("Invalid link!");
+} else {
+  socket.emit("getPlayerName", token);
+}
+
+// Receive assigned player name
+socket.on("playerNameAssigned", (name) => {
+  if(name==="Unknown"){ alert("Invalid link!"); return; }
+  playerName = name;
+  alert("Welcome " + playerName);
 });
 
+// Receive game started roles
 socket.on("gameStarted", (roles) => {
-  const name = prompt("Enter your name:");
-  if(name && roles[name]) roleEl.textContent = roles[name];
+  if(playerName && roles[playerName]){
+    roleEl.textContent = roles[playerName];
+  }
 });
 
+// Mark self dead
+markDeadBtn.addEventListener("click", () => {
+  if(playerName){
+    socket.emit("markDead", playerName);
+  }
+});
+
+// Notify when someone dies
 socket.on("playerDied", (name) => alert(name + " is dead!"));
-socket.on("gameEnded", () => { roleEl.textContent = "Unknown"; alert("Game ended!"); });
+
+// Game ended
+socket.on("gameEnded", () => {
+  roleEl.textContent = "Unknown";
+  alert("Game ended!");
+});
 </script>
 </body>
 </html>
