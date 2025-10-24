@@ -1,69 +1,73 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Killer Game • Host</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Killer Game • Host</title>
+<link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>🧠 Killer Game • Host Panel</h1>
+  <div class="container">
+    <h1>🧠 Killer Game • Host Panel</h1>
 
-  <input type="text" id="playerName" placeholder="Enter player name">
-  <button id="addPlayerBtn">Add Player</button>
+    <div class="input-section">
+      <input type="text" id="playerName" placeholder="Enter player name" />
+      <button id="addPlayerBtn">Add Player</button>
+    </div>
 
-  <div id="linkList"></div>
+    <div id="linkList" class="links"></div>
 
-  <div class="btn-section">
-    <button id="startGameBtn">Start New Game</button>
-    <button id="restartGameBtn">Restart Game</button>
-    <button id="startVotingBtn">Start Voting</button>
-    <button id="endGameBtn">End Game</button>
+    <div class="btn-section">
+      <button id="startGameBtn">🎲 Start New Game</button>
+      <button id="restartGameBtn">🔁 Restart Game</button>
+      <button id="startVotingBtn">🗳️ Start Voting</button>
+      <button id="endGameBtn">❌ End Game</button>
+    </div>
+
+    <h2>👥 Players</h2>
+    <div id="playersContainer"></div>
   </div>
 
-  <h2>Players:</h2>
-  <div id="playersContainer"></div>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+  const addBtn = document.getElementById("addPlayerBtn");
+  const nameInput = document.getElementById("playerName");
+  const linkList = document.getElementById("linkList");
+  const startBtn = document.getElementById("startGameBtn");
+  const restartBtn = document.getElementById("restartGameBtn");
+  const voteBtn = document.getElementById("startVotingBtn");
+  const endBtn = document.getElementById("endGameBtn");
+  const playersContainer = document.getElementById("playersContainer");
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const socket = io();
-    const addBtn = document.getElementById("addPlayerBtn");
-    const nameInput = document.getElementById("playerName");
-    const linkList = document.getElementById("linkList");
-    const startBtn = document.getElementById("startGameBtn");
-    const restartBtn = document.getElementById("restartGameBtn");
-    const voteBtn = document.getElementById("startVotingBtn");
-    const endBtn = document.getElementById("endGameBtn");
-    const playersContainer = document.getElementById("playersContainer");
+  addBtn.onclick = () => {
+    const name = nameInput.value.trim();
+    if (!name) return alert("Enter name!");
+    socket.emit("addPlayer", name);
+    nameInput.value = "";
+  };
 
-    addBtn.onclick = () => {
-      const name = nameInput.value.trim();
-      if (!name) return alert("Enter name!");
-      socket.emit("addPlayer", name);
-      nameInput.value = "";
-    };
+  socket.on("playerLinkGenerated", (player) => {
+    const link = `${window.location.origin}/player.html?link=${player.linkId}`;
+    const div = document.createElement("div");
+    div.innerHTML = `<strong>${player.name}</strong> ➜ <a href="${link}" target="_blank">${link}</a>`;
+    linkList.appendChild(div);
+  });
 
-    socket.on("playerLinkGenerated", (player) => {
-      const link = `${window.location.origin}/player.html?link=${player.linkId}`;
-      const div = document.createElement("div");
-      div.innerHTML = `<strong>${player.name}</strong> ➜ <a href="${link}" target="_blank">${link}</a>`;
-      linkList.appendChild(div);
-    });
+  startBtn.onclick = () => socket.emit("startGame");
+  restartBtn.onclick = () => socket.emit("restartGame");
+  voteBtn.onclick = () => socket.emit("startVoting");
+  endBtn.onclick = () => socket.emit("endGame");
 
-    startBtn.onclick = () => socket.emit("startGame");
-    restartBtn.onclick = () => socket.emit("restartGame");
-    voteBtn.onclick = () => socket.emit("startVoting");
-    endBtn.onclick = () => socket.emit("endGame");
+  socket.on("updatePlayers", (players) => {
+    playersContainer.innerHTML = players.map(p =>
+      `<div class="player-card ${p.alive ? '' : 'dead'}">${p.name} - ${p.alive ? 'Alive' : 'Dead'}</div>`
+    ).join('');
+  });
 
-    socket.on("updatePlayers", (players) => {
-      playersContainer.innerHTML = players.map(p =>
-        `<div class="player-card ${p.alive ? '' : 'dead'}">${p.name} - ${p.alive ? 'Alive' : 'Dead'}</div>`
-      ).join('');
-    });
-
-    socket.on("votingResult", data => {
-      alert(`${data.name} was a ${data.role}!`);
-    });
-  </script>
+  socket.on("votingResult", data => {
+    alert(`${data.name} was a ${data.role}!`);
+  });
+</script>
 </body>
 </html>
