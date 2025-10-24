@@ -69,7 +69,7 @@ socket.on("updatePlayers", (players, alive) => {
   });
 });
 
-// Receive token link for each player
+// Receive token link
 socket.on("playerToken", ({name, token}) => {
   const li = document.createElement("li");
   li.innerHTML = `${name}: <a href="/player.html?token=${token}" target="_blank">Link</a>`;
@@ -84,7 +84,7 @@ socket.on("gameStarted", (r) => {
 
 // Game ended
 socket.on("gameEnded", () => {
-  roles = {};
+  roles={};
   playerListEl.innerHTML="";
   playerLinksEl.innerHTML="";
   voteResultsEl.innerHTML="";
@@ -94,9 +94,7 @@ socket.on("gameEnded", () => {
 // Player died
 socket.on("playerDied", (name) => {
   const items = document.querySelectorAll("#playerList li");
-  items.forEach(li => {
-    if(li.textContent.includes(name)) li.style.textDecoration="line-through";
-  });
+  items.forEach(li => { if(li.textContent.includes(name)) li.style.textDecoration="line-through"; });
 });
 
 // Voting result
