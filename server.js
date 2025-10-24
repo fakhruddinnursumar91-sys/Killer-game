@@ -10,15 +10,15 @@ const io = new Server(server);
 
 app.use(express.static(path.join(__dirname, "public")));
 
-let players = [];       // list of player names
+let players = [];       // all player names
 let roles = {};         // name -> role
 let alive = {};         // name -> boolean
-let tokens = {};        // token -> player name
+let tokens = {};        // token -> name
 let votes = {};         // voter -> voted player
 let gameStarted = false;
 let votingStarted = false;
 
-// Send updated player list to host
+// emit updated player list to host
 function emitPlayers() {
   io.emit("updatePlayers", players, alive);
 }
@@ -66,13 +66,13 @@ io.on("connection", (socket) => {
     console.log("Game ended");
   });
 
-  // Player marks self dead
+  // Mark self dead
   socket.on("markDead", (name) => {
     if(alive[name] && roles[name]!=="Killer"){
       alive[name] = false;
       io.emit("playerDied", name);
       emitPlayers();
-      console.log("Player dead:", name);
+      console.log(name, "marked dead");
     }
   });
 
@@ -81,45 +81,43 @@ io.on("connection", (socket) => {
     if(gameStarted && !votingStarted){
       votingStarted = true;
       votes = {};
-      io.emit("votingStarted");
+      io.emit("votingStarted", alive);
       console.log("Voting started");
     }
   });
 
-  // Voting by players
+  // Player votes
   socket.on("vote", ({ voter, voted }) => {
-    if(votingStarted && alive[voter] && voted && alive[voted]){
+    if(votingStarted && alive[voter] && alive[voted]){
       votes[voter] = voted;
       console.log(`${voter} voted for ${voted}`);
-      // check if all alive players voted
+
+      // check if all alive voted
       const aliveCount = Object.values(alive).filter(a => a).length;
       if(Object.keys(votes).length === aliveCount){
-        // count votes
         const count = {};
-        Object.values(votes).forEach(v => count[v] = (count[v]||0)+1);
+        Object.values(votes).forEach(v => count[v]=(count[v]||0)+1);
         const sorted = Object.entries(count).sort((a,b)=>b[1]-a[1]);
         const [eliminated, maxVotes] = sorted[0];
-        const role = roles[eliminated];
         alive[eliminated] = false;
-        io.emit("votingResult", { eliminated, role });
-        emitPlayers();
         votingStarted = false;
-        console.log("Voting ended:", eliminated, role);
+        io.emit("votingResult", { eliminated, role: roles[eliminated] });
+        emitPlayers();
       }
     }
   });
 
-  // Player requests name via token
+  // Get player name from token
   socket.on("getPlayerName", (token) => {
     const name = tokens[token];
     socket.emit("playerNameAssigned", name || "Unknown");
   });
 
-  // Send current player list to new connection
+  // Update players for host
   socket.emit("updatePlayers", players, alive);
 
   socket.on("disconnect", () => console.log("User disconnected:", socket.id));
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, ()=>console.log(`Server running on port ${PORT}`));
+server.listen(PORT, ()=>console.log("Server running on port", PORT));
