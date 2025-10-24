@@ -1,4 +1,8 @@
-body {font-family:Poppins,sans-serif; display:flex; flex-direction:column; align-items:center; padding:20px; background:#f2f2f2;}
-h1,h2{text-align:center;}
-.controls{display:flex; flex-wrap:wrap; justify-content:center; margin-bottom:15px;}
-input,button{padding:10px 15px; margin:5px; border-radius:
+body {font-family:"Poppins",sans-serif;background:#f2f2f2;margin:0;padding:20px;display:flex;flex-direction:column;align-items:center;}
+h1 {font-size:26px;font-weight:bold;margin-bottom:15px;text-align:center;}
+button,input {font-size:16px;padding:8px 16px;margin:5px;border-radius:5px;border:none;cursor:pointer;transition:all 0.2s ease;}
+button:hover,input[type=button]:hover {transform:scale(1.05);}
+.players-container {display:flex;flex-wrap:wrap;justify-content:center;max-width:800px;}
+.player-card {background:white;border-radius:12px;box-shadow:0 3px 8px rgba(0,0,0,0.1);padding:15px;margin:10px;width:200px;text-align:center;transition:all 0.3s ease;}
+.player-card.dead {background:#ddd !important;opacity:0.6;}
+.role {font-size:20px;font-weight:bold;margin:10px 0;}
