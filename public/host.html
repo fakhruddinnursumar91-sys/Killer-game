@@ -48,7 +48,7 @@
   };
 
   socket.on("playerLinkGenerated", (player) => {
-    const link = `${window.location.origin}/player.html?link=${player.linkId}`;
+    const link = `${window.location.origin}/player.html?token=${player.token}`;
     const div = document.createElement("div");
     div.innerHTML = `<strong>${player.name}</strong> ➜ <a href="${link}" target="_blank">${link}</a>`;
     linkList.appendChild(div);
