@@ -33,6 +33,48 @@ const startVotingBtn = document.getElementById("startVotingBtn");
 
 let roles = {};
 
+// Add player
+addPlayerBtn.addEventListener("click", () => {
+  const name = playerNameInput.value.trim();
+  if (name) {
+    socket.emit("addPlayer", name);
+    playerNameInput.value = "";
+  }
+});
+
+// Start game
+startGameBtn.addEventListener("click", () => socket.emit("startGame"));
+
+// End game
+endGameBtn.addEventListener("click", () => socket.emit("endGame"));
+
+// Voting
+startVotingBtn.addEventListener("click", () => alert("Voting started!"));
+
+// Update player list
+socket.on("updatePlayers", (players, alive) => {
+  playerListEl.innerHTML = "";
+  players.forEach(name => {
+    const li = document.createElement("li");
+    li.textContent = name;
+    if (alive[name] === false) li.style.textDecoration = "line-through";
+    playerListEl.appendChild(li);
+  });
+});
+
+socket.on("gameStarted", (r) => {
+  roles = r;
+  alert("Game started! Roles assigned.");
+});
+
+socket.on("gameEnded", () => {
+  roles = {};
+  playerListEl.innerHTML = "";
+  alert("Game ended!");
+});
+</script>
+let roles = {};
+
 addPlayerBtn.addEventListener("click", () => {
   const name = playerNameInput.value.trim();
   if (name) {
