@@ -9,26 +9,50 @@ const io = new Server(server);
 
 app.use(express.static(path.join(__dirname, "public")));
 
-let players = []; // list of players
+let players = []; // all players
 let roles = {};   // roles assigned
 let alive = {};   // alive status
+let gameStarted = false;
 
 io.on("connection", (socket) => {
   console.log("A user connected:", socket.id);
 
-  socket.on("addPlayer", (playerName) => {
-    if (!players.includes(playerName)) {
-      players.push(playerName);
-      alive[playerName] = true;
-      io.emit("playerAdded", playerName);
-      console.log("Player added:", playerName);
+  socket.on("addPlayer", (name) => {
+    if (!gameStarted && !players.includes(name)) {
+      players.push(name);
+      alive[name] = true;
+      io.emit("playerAdded", name);
+      console.log("Player added:", name);
     }
   });
 
+  socket.on("startGame", () => {
+    if (!gameStarted && players.length >= 2) {
+      gameStarted = true;
+      const shuffled = [...players].sort(() => Math.random() - 0.5);
+      roles = {};
+      roles[shuffled[0]] = "Killer";
+      shuffled.slice(1).forEach(p => roles[p] = "Crewmate");
+      io.emit("gameStarted", roles);
+      console.log("Game started", roles);
+    }
+  });
+
+  socket.on("endGame", () => {
+    gameStarted = false;
+    players = [];
+    roles = {};
+    alive = {};
+    io.emit("gameEnded");
+    console.log("Game ended");
+  });
+
   socket.on("markDead", (playerName) => {
-    alive[playerName] = false;
-    io.emit("playerDied", playerName);
-    console.log("Player dead:", playerName);
+    if (alive[playerName] && roles[playerName] !== "Killer") {
+      alive[playerName] = false;
+      io.emit("playerDied", playerName);
+      console.log("Player dead:", playerName);
+    }
   });
 
   socket.on("disconnect", () => {
