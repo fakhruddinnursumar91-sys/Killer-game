@@ -9,23 +9,30 @@ const io = new Server(server);
 
 app.use(express.static(path.join(__dirname, "public")));
 
-let players = []; // all players
-let roles = {};   // roles assigned
-let alive = {};   // alive status
+let players = [];
+let roles = {};
+let alive = {};
 let gameStarted = false;
+
+// Emit the full player list to all clients
+function emitPlayers() {
+  io.emit("updatePlayers", players, alive);
+}
 
 io.on("connection", (socket) => {
   console.log("A user connected:", socket.id);
 
+  // Add player
   socket.on("addPlayer", (name) => {
-    if (!gameStarted && !players.includes(name)) {
+    if (!gameStarted && name && !players.includes(name)) {
       players.push(name);
       alive[name] = true;
-      io.emit("playerAdded", name);
+      emitPlayers();
       console.log("Player added:", name);
     }
   });
 
+  // Start game
   socket.on("startGame", () => {
     if (!gameStarted && players.length >= 2) {
       gameStarted = true;
@@ -38,6 +45,7 @@ io.on("connection", (socket) => {
     }
   });
 
+  // End game
   socket.on("endGame", () => {
     gameStarted = false;
     players = [];
@@ -47,13 +55,18 @@ io.on("connection", (socket) => {
     console.log("Game ended");
   });
 
+  // Mark player dead
   socket.on("markDead", (playerName) => {
     if (alive[playerName] && roles[playerName] !== "Killer") {
       alive[playerName] = false;
       io.emit("playerDied", playerName);
+      emitPlayers();
       console.log("Player dead:", playerName);
     }
   });
+
+  // Send updated list when client connects
+  socket.emit("updatePlayers", players, alive);
 
   socket.on("disconnect", () => {
     console.log("A user disconnected:", socket.id);
