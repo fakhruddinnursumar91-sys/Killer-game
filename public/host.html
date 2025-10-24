@@ -3,106 +3,73 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Killer Game Host</title>
-<link rel="stylesheet" href="style.css">
+<title>Killer • Host</title>
+<style>
+body {font-family:"Poppins",sans-serif;background:#f2f2f2;margin:0;padding:20px;display:flex;flex-direction:column;align-items:center;}
+h1 {font-size:26px;font-weight:bold;margin-bottom:15px;text-align:center;}
+button,input {font-size:16px;padding:8px 16px;margin:5px;border-radius:5px;border:none;cursor:pointer;transition:all 0.2s ease;}
+button:hover {transform:scale(1.05);}
+.players-container {display:flex;flex-wrap:wrap;justify-content:center;max-width:800px;}
+.player-card {background:white;border-radius:12px;box-shadow:0 3px 8px rgba(0,0,0,0.1);padding:15px;margin:10px;width:200px;text-align:center;transition:all 0.3s ease;}
+.player-card.dead {background:#ddd !important;opacity:0.6;}
+</style>
 </head>
 <body>
-<h1>Host Panel</h1>
+<h1>🔪 Killer • Host Panel</h1>
 
-<div class="controls">
-  <input id="playerName" placeholder="Enter player name">
-  <button id="addPlayerBtn">Add Player</button>
-  <button id="startGameBtn">Start Game</button>
-  <button id="startVotingBtn">Start Voting</button>
-  <button id="endGameBtn">End Game</button>
+<div>
+<input type="text" id="playerName" placeholder="Enter player name">
+<button id="addPlayerBtn">Add Player</button>
 </div>
 
-<h2>Players:</h2>
-<ul id="playerList"></ul>
+<div style="margin:10px;">
+<button id="startGameBtn">Start / New Game</button>
+<button id="endGameBtn">End & Reset Game</button>
+</div>
 
-<h2>Player Links:</h2>
-<ul id="playerLinks"></ul>
-
-<h2>Voting Results:</h2>
-<ul id="voteResults"></ul>
+<div class="players-container" id="playersContainer"></div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
 const socket = io();
-const playerListEl = document.getElementById("playerList");
-const playerLinksEl = document.getElementById("playerLinks");
-const voteResultsEl = document.getElementById("voteResults");
-const playerNameInput = document.getElementById("playerName");
-const addPlayerBtn = document.getElementById("addPlayerBtn");
-const startGameBtn = document.getElementById("startGameBtn");
-const startVotingBtn = document.getElementById("startVotingBtn");
-const endGameBtn = document.getElementById("endGameBtn");
 
-let roles = {};
+const playerNameInput = document.getElementById('playerName');
+const addPlayerBtn = document.getElementById('addPlayerBtn');
+const startGameBtn = document.getElementById('startGameBtn');
+const endGameBtn = document.getElementById('endGameBtn');
+const playersContainer = document.getElementById('playersContainer');
 
-// Add player
-addPlayerBtn.addEventListener("click", () => {
+let players = [];
+
+addPlayerBtn.addEventListener('click', () => {
   const name = playerNameInput.value.trim();
-  if(name){
-    socket.emit("addPlayer", name);
-    playerNameInput.value = "";
-  }
+  if (!name) return alert("Enter name");
+  socket.emit('newPlayer', name);
+  playerNameInput.value = '';
 });
 
-// Start game
-startGameBtn.addEventListener("click", () => socket.emit("startGame"));
+startGameBtn.addEventListener('click', () => {
+  socket.emit('startGame');
+});
 
-// End game
-endGameBtn.addEventListener("click", () => socket.emit("endGame"));
+endGameBtn.addEventListener('click', () => {
+  socket.emit('endGame');
+});
 
-// Start voting
-startVotingBtn.addEventListener("click", () => socket.emit("startVoting"));
+socket.on('updatePlayers', data => {
+  players = data;
+  renderPlayers();
+});
 
-// Update player list
-socket.on("updatePlayers", (players, alive) => {
-  playerListEl.innerHTML = "";
-  players.forEach(name => {
-    const li = document.createElement("li");
-    li.textContent = name;
-    if(alive[name]===false) li.style.textDecoration="line-through";
-    playerListEl.appendChild(li);
+function renderPlayers() {
+  playersContainer.innerHTML = '';
+  players.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'player-card' + (p.alive ? '' : ' dead');
+    div.innerText = `${p.name} - ${p.alive ? 'Alive' : 'Dead'}`;
+    playersContainer.appendChild(div);
   });
-});
-
-// Receive token link
-socket.on("playerToken", ({name, token}) => {
-  const li = document.createElement("li");
-  li.innerHTML = `${name}: <a href="/player.html?token=${token}" target="_blank">Link</a>`;
-  playerLinksEl.appendChild(li);
-});
-
-// Game started
-socket.on("gameStarted", (r) => {
-  roles = r;
-  alert("Game started! Roles assigned.");
-});
-
-// Game ended
-socket.on("gameEnded", () => {
-  roles={};
-  playerListEl.innerHTML="";
-  playerLinksEl.innerHTML="";
-  voteResultsEl.innerHTML="";
-  alert("Game ended!");
-});
-
-// Player died
-socket.on("playerDied", (name) => {
-  const items = document.querySelectorAll("#playerList li");
-  items.forEach(li => { if(li.textContent.includes(name)) li.style.textDecoration="line-through"; });
-});
-
-// Voting result
-socket.on("votingResult", ({eliminated, role}) => {
-  const li = document.createElement("li");
-  li.textContent = `${eliminated} got eliminated. Role: ${role}`;
-  voteResultsEl.appendChild(li);
-});
+}
 </script>
 </body>
 </html>
