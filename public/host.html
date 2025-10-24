@@ -1,90 +1,47 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Host Panel - Killer Game</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-  <style>
-    body {
-      font-family: 'Poppins', sans-serif;
-      background: linear-gradient(135deg,#ffdde1,#ee9ca7);
-      margin:0; display:flex; justify-content:center; align-items:center; height:100vh;
-      color:#333;
-    }
-    .container {
-      width: 95%; max-width: 450px;
-      text-align:center;
-    }
-    h2 { margin-bottom: 25px; font-size: 28px; }
-    input, button {
-      padding: 14px; margin: 8px; border-radius: 12px;
-      border: none; font-size: 18px; transition: 0.3s; width: 70%;
-    }
-    button:hover { transform: scale(1.05); cursor: pointer; }
-    #players { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
-    .player-card {
-      background:white; padding:16px; border-radius:16px;
-      box-shadow:0 5px 15px rgba(0,0,0,0.15); transition:0.3s;
-      font-size:18px;
-    }
-    .alive { color:green; font-weight:bold; }
-    .dead { color:red; font-weight:bold; }
-    a { display:block; margin-top:5px; color:#007BFF; text-decoration:none; font-size:16px; }
-    a:hover { color:#0056b3; }
-    .controls { display:flex; flex-direction:column; align-items:center; gap:10px; margin-bottom:20px; }
-    .broadcast { background: rgba(255,255,255,0.7); padding:12px; margin-top:10px; border-radius:10px; animation: fadeIn 0.5s; font-size:16px; }
-    @keyframes fadeIn { from {opacity:0; transform: translateY(-10px);} to {opacity:1; transform: translateY(0);} }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Killer Game Host</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="container">
-    <h2>🎮 Host Panel</h2>
-    <div class="controls">
-      <input id="playerName" placeholder="Enter player name">
-      <button id="addBtn">➕ Add Player</button>
-      <button id="startBtn">🚀 Start Game</button>
-      <button id="voteBtn">🗳️ Start Voting</button>
-      <button id="endBtn">🛑 End Game</button>
-    </div>
-    <div id="players"></div>
-  </div>
+<h1>Host Panel</h1>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const socket = io();
-    const nameInput = document.getElementById('playerName');
-    const addBtn = document.getElementById('addBtn');
-    const startBtn = document.getElementById('startBtn');
-    const voteBtn = document.getElementById('voteBtn');
-    const endBtn = document.getElementById('endBtn');
-    const playersDiv = document.getElementById('players');
+<input id="playerName" placeholder="Enter player name">
+<button id="addPlayerBtn">Add Player</button>
 
-    addBtn.addEventListener("click", () => {
-      const name = nameInput.value.trim();
-      if(!name) return alert("Enter player name!");
-      socket.emit("addPlayer", name);
-      nameInput.value = '';
-    });
+<h2>Players:</h2>
+<ul id="playerList"></ul>
 
-    startBtn.addEventListener("click", () => socket.emit("startGame"));
-    voteBtn.addEventListener("click", () => socket.emit("startVoting"));
-    endBtn.addEventListener("click", () => { if(confirm("End game?")) socket.emit("endGame"); });
+<script src="/socket.io/socket.io.js"></script>
+<script src="script.js"></script>
+<script>
+const socket = io();
+const addPlayerBtn = document.getElementById("addPlayerBtn");
+const playerNameInput = document.getElementById("playerName");
 
-    socket.on("updatePlayers", (list) => {
-      playersDiv.innerHTML = list.map(p => `
-        <div class="player-card">
-          ${p.name} - <span class="${p.alive?'alive':'dead'}">${p.alive?'Alive':'Dead'}</span>
-          <a href="/player.html?token=${p.token}" target="_blank">Player Link</a>
-        </div>`).join('');
-    });
+addPlayerBtn.addEventListener("click", () => {
+  const name = playerNameInput.value.trim();
+  if (name) {
+    socket.emit("addPlayer", name);
+    playerNameInput.value = "";
+  }
+});
 
-    socket.on("broadcast", msg => {
-      const div = document.createElement("div");
-      div.className = "broadcast";
-      div.innerText = msg;
-      document.querySelector(".container").appendChild(div);
-    });
-  </script>
+socket.on("playerAdded", (playerName) => {
+  const li = document.createElement("li");
+  li.textContent = playerName;
+  document.getElementById("playerList").appendChild(li);
+});
+
+socket.on("playerDied", (playerName) => {
+  const items = document.querySelectorAll("#playerList li");
+  items.forEach(li => {
+    if(li.textContent === playerName) li.style.textDecoration = "line-through";
+  });
+});
+</script>
 </body>
 </html>
-
-
