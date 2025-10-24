@@ -23,16 +23,20 @@
 <h2>Player Links:</h2>
 <ul id="playerLinks"></ul>
 
+<h2>Voting Results:</h2>
+<ul id="voteResults"></ul>
+
 <script src="/socket.io/socket.io.js"></script>
 <script>
 const socket = io();
 const playerListEl = document.getElementById("playerList");
 const playerLinksEl = document.getElementById("playerLinks");
+const voteResultsEl = document.getElementById("voteResults");
 const playerNameInput = document.getElementById("playerName");
 const addPlayerBtn = document.getElementById("addPlayerBtn");
 const startGameBtn = document.getElementById("startGameBtn");
-const endGameBtn = document.getElementById("endGameBtn");
 const startVotingBtn = document.getElementById("startVotingBtn");
+const endGameBtn = document.getElementById("endGameBtn");
 
 let roles = {};
 
@@ -51,8 +55,8 @@ startGameBtn.addEventListener("click", () => socket.emit("startGame"));
 // End game
 endGameBtn.addEventListener("click", () => socket.emit("endGame"));
 
-// Voting placeholder
-startVotingBtn.addEventListener("click", () => alert("Voting started!"));
+// Start voting
+startVotingBtn.addEventListener("click", () => socket.emit("startVoting"));
 
 // Update player list
 socket.on("updatePlayers", (players, alive) => {
@@ -72,23 +76,34 @@ socket.on("playerToken", ({name, token}) => {
   playerLinksEl.appendChild(li);
 });
 
+// Game started
 socket.on("gameStarted", (r) => {
   roles = r;
   alert("Game started! Roles assigned.");
 });
 
+// Game ended
 socket.on("gameEnded", () => {
   roles = {};
   playerListEl.innerHTML="";
   playerLinksEl.innerHTML="";
+  voteResultsEl.innerHTML="";
   alert("Game ended!");
 });
 
+// Player died
 socket.on("playerDied", (name) => {
   const items = document.querySelectorAll("#playerList li");
   items.forEach(li => {
     if(li.textContent.includes(name)) li.style.textDecoration="line-through";
   });
+});
+
+// Voting result
+socket.on("votingResult", ({eliminated, role}) => {
+  const li = document.createElement("li");
+  li.textContent = `${eliminated} got eliminated. Role: ${role}`;
+  voteResultsEl.appendChild(li);
 });
 </script>
 </body>
