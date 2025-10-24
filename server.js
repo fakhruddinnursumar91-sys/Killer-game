@@ -14,9 +14,11 @@ let players = [];       // list of player names
 let roles = {};         // name -> role
 let alive = {};         // name -> boolean
 let tokens = {};        // token -> player name
+let votes = {};         // voter -> voted player
 let gameStarted = false;
+let votingStarted = false;
 
-// Emit updated player list to host
+// Send updated player list to host
 function emitPlayers() {
   io.emit("updatePlayers", players, alive);
 }
@@ -24,19 +26,14 @@ function emitPlayers() {
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
-  // Add player (from host)
+  // Add player
   socket.on("addPlayer", (name) => {
     if(!gameStarted && name && !players.includes(name)){
       players.push(name);
       alive[name] = true;
-
-      // Generate unique token
       const token = crypto.randomBytes(4).toString("hex");
       tokens[token] = name;
-
-      // Send token back to host
       socket.emit("playerToken", { name, token });
-
       emitPlayers();
       console.log("Player added:", name, "Token:", token);
     }
@@ -50,6 +47,7 @@ io.on("connection", (socket) => {
       roles = {};
       roles[shuffled[0]] = "Killer";
       shuffled.slice(1).forEach(p=>roles[p]="Crewmate");
+      votes = {};
       io.emit("gameStarted", roles);
       console.log("Game started", roles);
     }
@@ -58,10 +56,12 @@ io.on("connection", (socket) => {
   // End game
   socket.on("endGame", () => {
     gameStarted = false;
+    votingStarted = false;
     players = [];
     roles = {};
     alive = {};
     tokens = {};
+    votes = {};
     io.emit("gameEnded");
     console.log("Game ended");
   });
@@ -73,6 +73,39 @@ io.on("connection", (socket) => {
       io.emit("playerDied", name);
       emitPlayers();
       console.log("Player dead:", name);
+    }
+  });
+
+  // Start voting
+  socket.on("startVoting", () => {
+    if(gameStarted && !votingStarted){
+      votingStarted = true;
+      votes = {};
+      io.emit("votingStarted");
+      console.log("Voting started");
+    }
+  });
+
+  // Voting by players
+  socket.on("vote", ({ voter, voted }) => {
+    if(votingStarted && alive[voter] && voted && alive[voted]){
+      votes[voter] = voted;
+      console.log(`${voter} voted for ${voted}`);
+      // check if all alive players voted
+      const aliveCount = Object.values(alive).filter(a => a).length;
+      if(Object.keys(votes).length === aliveCount){
+        // count votes
+        const count = {};
+        Object.values(votes).forEach(v => count[v] = (count[v]||0)+1);
+        const sorted = Object.entries(count).sort((a,b)=>b[1]-a[1]);
+        const [eliminated, maxVotes] = sorted[0];
+        const role = roles[eliminated];
+        alive[eliminated] = false;
+        io.emit("votingResult", { eliminated, role });
+        emitPlayers();
+        votingStarted = false;
+        console.log("Voting ended:", eliminated, role);
+      }
     }
   });
 
