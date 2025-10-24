@@ -1,91 +1,120 @@
-const express = require('express');
+const express = require("express");
 const app = express();
-const http = require('http').createServer(app);
-const io = require('socket.io')(http);
+const http = require("http").createServer(app);
+const io = require("socket.io")(http);
+const { v4: uuidv4 } = require("uuid");
 
-app.use(express.static('public'));
+app.use(express.static("public"));
 
-let players = []; // {name, id, alive, role}
+let players = []; // { id, name, linkId, alive, role, socketId }
 let gameStarted = false;
+let votingActive = false;
 
-// Shuffle helper
 function shuffle(array) {
   return array.sort(() => Math.random() - 0.5);
 }
 
-// Assign roles
 function assignRoles() {
   if (players.length < 2) return;
   const shuffled = shuffle([...players]);
   shuffled[0].role = "Killer";
-  shuffled.slice(1).forEach(p => p.role = "Crewmate");
-  players.forEach(p => p.alive = true);
+  shuffled.slice(1).forEach((p) => (p.role = "Crewmate"));
 }
 
-// Reset game
 function resetGame() {
-  players.forEach(p => p.alive = true);
+  players.forEach((p) => (p.alive = true));
   assignRoles();
+  players.forEach((p) => {
+    if (p.socketId) io.to(p.socketId).emit("yourRole", p.role);
+  });
+  io.emit("updatePlayers", players.map(({ name, alive }) => ({ name, alive })));
 }
 
-// Send updated player list to all
-function updatePlayers() {
-  io.emit('updatePlayers', players.map(p => ({
-    name: p.name,
-    alive: p.alive
-  })));
+function broadcastPlayers() {
+  io.emit("updatePlayers", players.map(({ name, alive }) => ({ name, alive })));
 }
 
-// Send role to a player
-function sendRole(socket) {
-  const player = players.find(p => p.id === socket.id);
-  if (player) socket.emit('yourRole', player.role);
-}
+io.on("connection", (socket) => {
+  console.log("New connection:", socket.id);
 
-io.on('connection', socket => {
+  // Player joins with their unique link
+  socket.on("joinWithLink", (linkId, name) => {
+    let player = players.find((p) => p.linkId === linkId);
+    if (!player) return;
+    player.name = name;
+    player.socketId = socket.id;
 
-  // New player joins
-  socket.on('newPlayer', name => {
-    let existing = players.find(p => p.name === name);
-    if (!existing) {
-      players.push({name, id: socket.id, alive: true, role: null});
-    } else {
-      existing.id = socket.id; // reconnect
-    }
-
-    if (gameStarted) sendRole(socket);
-    updatePlayers();
+    if (gameStarted) socket.emit("yourRole", player.role);
+    broadcastPlayers();
   });
 
-  // Host starts game
-  socket.on('startGame', () => {
-    gameStarted = true;
+  // Host adds a player (generates unique link)
+  socket.on("addPlayer", (name) => {
+    const linkId = uuidv4();
+    const player = { id: uuidv4(), name, linkId, alive: true, role: null, socketId: null };
+    players.push(player);
+    socket.emit("playerLinkGenerated", player);
+    broadcastPlayers();
+  });
+
+  // Start new game (reshuffle roles, set everyone alive)
+  socket.on("startGame", () => {
+    if (players.length < 2) return;
+    players.forEach((p) => (p.alive = true));
     assignRoles();
-    players.forEach(p => io.to(p.id).emit('yourRole', p.role));
-    updatePlayers();
+    gameStarted = true;
+    votingActive = false;
+    players.forEach((p) => {
+      if (p.socketId) io.to(p.socketId).emit("yourRole", p.role);
+    });
+    broadcastPlayers();
   });
 
-  // Host ends game
-  socket.on('endGame', () => {
-    gameStarted = false;
+  // Restart game (same players, reshuffle roles)
+  socket.on("restartGame", () => {
     resetGame();
-    players.forEach(p => io.to(p.id).emit('yourRole', p.role));
-    updatePlayers();
+    votingActive = false;
+    gameStarted = true;
   });
 
-  // Player toggles dead/alive
-  socket.on('toggleDead', () => {
-    const player = players.find(p => p.id === socket.id);
+  // End game completely
+  socket.on("endGame", () => {
+    gameStarted = false;
+    votingActive = false;
+    players = [];
+    broadcastPlayers();
+  });
+
+  // Mark player dead/alive
+  socket.on("toggleDead", (linkId) => {
+    const player = players.find((p) => p.linkId === linkId);
     if (!player || player.role === "Killer") return;
     player.alive = !player.alive;
-    updatePlayers();
-    io.emit('playerDeadMessage', player.name);
+    io.emit("playerDeadMessage", player.name);
+    broadcastPlayers();
   });
 
-  socket.on('disconnect', () => {
-    updatePlayers(); // keep player data for reconnect
+  // Voting control by host
+  socket.on("startVoting", () => {
+    if (!gameStarted) return;
+    votingActive = true;
+    io.emit("votingStarted");
   });
 
+  socket.on("voteResult", (eliminatedName) => {
+    const eliminated = players.find((p) => p.name === eliminatedName);
+    if (eliminated) eliminated.alive = false;
+    io.emit("votingResult", {
+      name: eliminatedName,
+      role: eliminated ? eliminated.role : "Unknown",
+    });
+    votingActive = false;
+    broadcastPlayers();
+  });
+
+  socket.on("disconnect", () => {
+    console.log("Disconnected:", socket.id);
+  });
 });
 
 const PORT = process.env.PORT || 3000;
