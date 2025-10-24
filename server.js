@@ -8,12 +8,12 @@ app.use(express.static('public'));
 let players = []; // {name, id, alive, role}
 let gameStarted = false;
 
-// Utility to shuffle array
+// Shuffle helper
 function shuffle(array) {
   return array.sort(() => Math.random() - 0.5);
 }
 
-// Assign roles to all players
+// Assign roles
 function assignRoles() {
   if (players.length < 2) return;
   const shuffled = shuffle([...players]);
@@ -22,13 +22,13 @@ function assignRoles() {
   players.forEach(p => p.alive = true);
 }
 
-// Reset game (alive and shuffle roles)
+// Reset game
 function resetGame() {
   players.forEach(p => p.alive = true);
   assignRoles();
 }
 
-// Emit current state to all players
+// Send updated player list to all
 function updatePlayers() {
   io.emit('updatePlayers', players.map(p => ({
     name: p.name,
@@ -36,20 +36,16 @@ function updatePlayers() {
   })));
 }
 
-// Emit role to specific player
+// Send role to a player
 function sendRole(socket) {
   const player = players.find(p => p.id === socket.id);
-  if (player) {
-    socket.emit('yourRole', player.role);
-  }
+  if (player) socket.emit('yourRole', player.role);
 }
 
-// Socket.io connections
 io.on('connection', socket => {
 
   // New player joins
   socket.on('newPlayer', name => {
-    // Check if already exists
     let existing = players.find(p => p.name === name);
     if (!existing) {
       players.push({name, id: socket.id, alive: true, role: null});
@@ -57,20 +53,15 @@ io.on('connection', socket => {
       existing.id = socket.id; // reconnect
     }
 
-    // If game already started, assign role to this player
     if (gameStarted) sendRole(socket);
-
     updatePlayers();
   });
 
-  // Host starts the game
+  // Host starts game
   socket.on('startGame', () => {
     gameStarted = true;
     assignRoles();
-    // Send role to each player
-    players.forEach(p => {
-      io.to(p.id).emit('yourRole', p.role);
-    });
+    players.forEach(p => io.to(p.id).emit('yourRole', p.role));
     updatePlayers();
   });
 
@@ -78,25 +69,23 @@ io.on('connection', socket => {
   socket.on('endGame', () => {
     gameStarted = false;
     resetGame();
-    // Send roles again
     players.forEach(p => io.to(p.id).emit('yourRole', p.role));
     updatePlayers();
   });
 
-  // Player marks dead
+  // Player toggles dead/alive
   socket.on('toggleDead', () => {
     const player = players.find(p => p.id === socket.id);
-    if (!player || player.role === "Killer") return; // Killer cannot mark dead
+    if (!player || player.role === "Killer") return;
     player.alive = !player.alive;
     updatePlayers();
     io.emit('playerDeadMessage', player.name);
   });
 
-  // Disconnect
   socket.on('disconnect', () => {
-    // Keep player data to allow reconnect
-    updatePlayers();
+    updatePlayers(); // keep player data for reconnect
   });
+
 });
 
 const PORT = process.env.PORT || 3000;
