@@ -19,9 +19,10 @@
 
 <h2>Players:</h2>
 <ul id="playerList"></ul>
+
 <script src="/socket.io/socket.io.js"></script>
 <script>
-const socket = io();
+const socket = io(); // automatically connects to same domain
 const playerListEl = document.getElementById("playerList");
 const playerNameInput = document.getElementById("playerName");
 const addPlayerBtn = document.getElementById("addPlayerBtn");
@@ -34,7 +35,7 @@ let roles = {};
 // Add player
 addPlayerBtn.addEventListener("click", () => {
   const name = playerNameInput.value.trim();
-  if (name) {
+  if(name) {
     socket.emit("addPlayer", name);
     playerNameInput.value = "";
   }
@@ -49,11 +50,15 @@ endGameBtn.addEventListener("click", () => socket.emit("endGame"));
 // Voting
 startVotingBtn.addEventListener("click", () => alert("Voting started!"));
 
-// Update player list
-socket.on("playerAdded", (name) => {
-  const li = document.createElement("li");
-  li.textContent = name;
-  playerListEl.appendChild(li);
+// Update player list live
+socket.on("updatePlayers", (players, alive) => {
+  playerListEl.innerHTML = "";
+  players.forEach(name => {
+    const li = document.createElement("li");
+    li.textContent = name;
+    if(alive[name] === false) li.style.textDecoration = "line-through";
+    playerListEl.appendChild(li);
+  });
 });
 
 socket.on("gameStarted", (r) => {
