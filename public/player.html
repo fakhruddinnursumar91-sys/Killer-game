@@ -7,74 +7,71 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>🎮 Killer Game</h1>
-  <input type="text" id="nameInput" placeholder="Enter your name">
-  <button id="joinBtn">Join Game</button>
+  <div class="container">
+    <h1>🎮 Killer Game</h1>
+    <input type="text" id="nameInput" placeholder="Enter your name">
+    <button id="joinBtn">Join Game</button>
 
-  <h2 id="roleDisplay">Role: ?</h2>
-  <button id="toggleDeadBtn">Mark Dead / Alive</button>
+    <h2 id="roleDisplay">Role: ?</h2>
+    <button id="toggleDeadBtn">💀 Mark Dead / ❤️ Alive</button>
 
-  <div id="votingArea" style="display:none;">
-    <h3>Vote to eliminate:</h3>
-    <div id="voteOptions"></div>
+    <div id="votingArea" style="display:none;">
+      <h3>Vote to eliminate:</h3>
+      <div id="voteOptions"></div>
+    </div>
   </div>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const socket = io();
-    const params = new URLSearchParams(window.location.search);
-    const linkId = params.get("link");
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+  const params = new URLSearchParams(window.location.search);
+  const linkId = params.get("link");
 
-    const nameInput = document.getElementById("nameInput");
-    const joinBtn = document.getElementById("joinBtn");
-    const roleDisplay = document.getElementById("roleDisplay");
-    const toggleDeadBtn = document.getElementById("toggleDeadBtn");
-    const votingArea = document.getElementById("votingArea");
-    const voteOptions = document.getElementById("voteOptions");
+  const nameInput = document.getElementById("nameInput");
+  const joinBtn = document.getElementById("joinBtn");
+  const roleDisplay = document.getElementById("roleDisplay");
+  const toggleDeadBtn = document.getElementById("toggleDeadBtn");
+  const votingArea = document.getElementById("votingArea");
+  const voteOptions = document.getElementById("voteOptions");
 
-    joinBtn.onclick = () => {
-      const name = nameInput.value.trim();
-      if (!name) return alert("Enter your name");
-      socket.emit("joinWithLink", linkId, name);
-      joinBtn.disabled = true;
-      nameInput.disabled = true;
-    };
+  joinBtn.onclick = () => {
+    const name = nameInput.value.trim();
+    if (!name) return alert("Enter your name");
+    socket.emit("joinWithLink", linkId, name);
+    joinBtn.disabled = true;
+    nameInput.disabled = true;
+  };
 
-    toggleDeadBtn.onclick = () => socket.emit("toggleDead", linkId);
+  toggleDeadBtn.onclick = () => socket.emit("toggleDead", linkId);
 
-    socket.on("yourRole", (role) => {
-      roleDisplay.innerText = `Role: ${role}`;
-    });
+  socket.on("yourRole", (role) => {
+    roleDisplay.innerText = `Role: ${role}`;
+  });
 
-    socket.on("playerDeadMessage", (name) => {
-      alert(`${name} is dead!`);
-    });
+  socket.on("playerDeadMessage", (name) => {
+    alert(`${name} is dead!`);
+  });
 
-    socket.on("votingStarted", () => {
-      votingArea.style.display = "block";
-      fetchPlayers();
-    });
+  socket.on("votingStarted", () => {
+    votingArea.style.display = "block";
+  });
 
-    socket.on("votingResult", (data) => {
-      votingArea.style.display = "none";
-      alert(`${data.name} was a ${data.role}`);
-    });
+  socket.on("votingResult", (data) => {
+    votingArea.style.display = "none";
+    alert(`${data.name} was a ${data.role}`);
+  });
 
-    function fetchPlayers() {
-      socket.emit("getPlayers");
-    }
+  socket.on("updatePlayers", (players) => {
+    voteOptions.innerHTML = players
+      .filter(p => p.alive)
+      .map(p => `<button onclick="vote('${p.name}')">${p.name}</button>`)
+      .join('');
+  });
 
-    socket.on("updatePlayers", (players) => {
-      voteOptions.innerHTML = players
-        .filter(p => p.alive)
-        .map(p => `<button onclick="vote('${p.name}')">${p.name}</button>`)
-        .join('');
-    });
-
-    function vote(name) {
-      socket.emit("voteResult", name);
-      votingArea.style.display = "none";
-    }
-  </script>
+  function vote(name) {
+    socket.emit("voteResult", name);
+    votingArea.style.display = "none";
+  }
+</script>
 </body>
 </html>
