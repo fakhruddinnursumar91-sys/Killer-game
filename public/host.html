@@ -9,8 +9,13 @@
 <body>
 <h1>Host Panel</h1>
 
-<input id="playerName" placeholder="Enter player name">
-<button id="addPlayerBtn">Add Player</button>
+<div class="controls">
+  <input id="playerName" placeholder="Enter player name">
+  <button id="addPlayerBtn">Add Player</button>
+  <button id="startGameBtn">Start Game</button>
+  <button id="startVotingBtn">Start Voting</button>
+  <button id="endGameBtn">End Game</button>
+</div>
 
 <h2>Players:</h2>
 <ul id="playerList"></ul>
@@ -19,8 +24,14 @@
 <script src="script.js"></script>
 <script>
 const socket = io();
-const addPlayerBtn = document.getElementById("addPlayerBtn");
+const playerListEl = document.getElementById("playerList");
 const playerNameInput = document.getElementById("playerName");
+const addPlayerBtn = document.getElementById("addPlayerBtn");
+const startGameBtn = document.getElementById("startGameBtn");
+const endGameBtn = document.getElementById("endGameBtn");
+const startVotingBtn = document.getElementById("startVotingBtn");
+
+let roles = {};
 
 addPlayerBtn.addEventListener("click", () => {
   const name = playerNameInput.value.trim();
@@ -30,16 +41,39 @@ addPlayerBtn.addEventListener("click", () => {
   }
 });
 
-socket.on("playerAdded", (playerName) => {
-  const li = document.createElement("li");
-  li.textContent = playerName;
-  document.getElementById("playerList").appendChild(li);
+startGameBtn.addEventListener("click", () => {
+  socket.emit("startGame");
 });
 
-socket.on("playerDied", (playerName) => {
+endGameBtn.addEventListener("click", () => {
+  socket.emit("endGame");
+  playerListEl.innerHTML = "";
+});
+
+startVotingBtn.addEventListener("click", () => {
+  alert("Voting started! (You can implement voting logic next)");
+});
+
+socket.on("playerAdded", (name) => {
+  const li = document.createElement("li");
+  li.textContent = name;
+  playerListEl.appendChild(li);
+});
+
+socket.on("gameStarted", (r) => {
+  roles = r;
+  alert("Game started! Roles assigned.");
+});
+
+socket.on("gameEnded", () => {
+  roles = {};
+  alert("Game ended!");
+});
+
+socket.on("playerDied", (name) => {
   const items = document.querySelectorAll("#playerList li");
   items.forEach(li => {
-    if(li.textContent === playerName) li.style.textDecoration = "line-through";
+    if(li.textContent === name) li.style.textDecoration = "line-through";
   });
 });
 </script>
